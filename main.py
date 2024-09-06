@@ -1,5 +1,6 @@
 import requests
 import csv
+import asyncio
 
 from bs4 import BeautifulSoup
 
@@ -10,7 +11,7 @@ def get_url(data_file):
             yield line
 
 
-def get_data(url):
+async def get_data(url):
     headers = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
     }
@@ -24,13 +25,13 @@ def get_info(html):
     print(1)
 
 
-def main():
+async def main():
     csv_data = "./towns.csv"
     with open(csv_data, 'r', encoding='utf-8') as csv_file:
         lines = csv.reader(csv_file)
         next(lines)
         for line in lines:
-            html = get_data(line[2])
+            html = await get_data(line[2])
             get_info(html)
 
 
@@ -41,4 +42,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
