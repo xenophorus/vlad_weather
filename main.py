@@ -1,16 +1,11 @@
 from dataclasses import dataclass
-
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
                                QPushButton, QLabel, QScrollArea, QComboBox, QProgressBar, QFrame, QLineEdit)
 from PySide6.QtCore import QSize, Qt
-
-from PySide6.QtGui import QPalette, QColor, QCloseEvent
-
 from pathlib import Path
-
 import time
-
 from Settings import settings
+from WeatherData import WeatherData
 
 '''
 TODO
@@ -19,6 +14,8 @@ progressbar alpha? Over? gets forecast
 write and read class 
 
 '''
+
+
 @dataclass
 class Sizes:
     win_x: int = 750
@@ -26,7 +23,7 @@ class Sizes:
     contents_margins: tuple[int] = (10, 10, 10, 10)
     spacing: int = 5
     widget_min_width: int = 150
-    widget_min_height = 30
+    widget_min_height: int = 30
 
 
 class Gui(QMainWindow):
@@ -36,10 +33,41 @@ class Gui(QMainWindow):
         self.setMinimumSize(QSize(Sizes.win_x, Sizes.win_y))
         self.cmb_days = QComboBox()
         self.cmb_day_or_night = QComboBox()
-        self.destination_dir = Path(settings.get("last_path"))
+        self.progress = QProgressBar()
+        self.destination_dir = Path(settings.get_target_folder())
+        self.layout_base = QVBoxLayout()
+        self.layout_center = QVBoxLayout()
 
-        layout_base = QVBoxLayout()
-        layout_base.setContentsMargins(5, 5, 5, 5)
+        self.setup_widgets()
+        # self.get_forecast()
+
+    def get_forecast(self):
+        [self.layout_center.removeItem(x) for x in self.layout_center.children()]
+        self.layout_center.update()
+        time.sleep(0.5)
+        self.progress.setValue(0)
+        self.progress.setRange(0, 9)
+
+        for i in range(10):
+            time.sleep(0.3)
+            layout_h = QHBoxLayout()
+            layout_h.setContentsMargins(5, 5, 5, 5)
+            lbl = QLabel()
+            lbl.setText(f"label {i} {time.time()}")
+            lbl.setMinimumHeight(Sizes.widget_min_height)
+
+            btn = QPushButton()
+            btn.setText(f"Переместить")
+            btn.setMaximumWidth(Sizes.widget_min_width)
+            btn.setMinimumHeight(Sizes.widget_min_height)
+
+            layout_h.addWidget(lbl)
+            layout_h.addWidget(btn)
+            self.layout_center.addLayout(layout_h)
+            self.progress.setValue(i)
+
+    def setup_widgets(self):
+        self.layout_base.setContentsMargins(5, 5, 5, 5)
 
         frame_top = QFrame()
         frame_top.setFrameStyle(QFrame.StyledPanel | QFrame.Plain)
@@ -81,7 +109,7 @@ class Gui(QMainWindow):
         btn_load_data.setMinimumWidth(Sizes.widget_min_width)
         btn_load_data.setMinimumHeight(Sizes.widget_min_height)
         btn_load_data.setText("Загрузить данные")
-        btn_load_data.clicked.connect(self.test_progress)
+        btn_load_data.clicked.connect(self.get_forecast)
         layout_load.addWidget(btn_load_data)
 
         layout_address = QHBoxLayout()
@@ -109,52 +137,29 @@ class Gui(QMainWindow):
         layout_top.addLayout(layout_top_up)
         layout_top.addLayout(layout_address)
 
-        layout_center = QVBoxLayout()
-        layout_center.setContentsMargins(10, 5, 10, 5)
-        layout_center.setSpacing(Sizes.spacing)
+        self.layout_center.setContentsMargins(10, 5, 10, 5)
+        self.layout_center.setSpacing(Sizes.spacing)
         frame_top.setLayout(layout_top)
-        layout_base.addWidget(frame_top)
+        self.layout_base.addWidget(frame_top)
         # layout_base.addLayout(layout_top_up)
 
-        self.progress = QProgressBar()
         self.progress.setTextVisible(False)
-        self.progress.setRange(0, 10)
         self.progress.setMaximumHeight(10)
         self.progress.setValue(0)
 
-        layout_base.addWidget(self.progress)
+        self.layout_base.addWidget(self.progress)
 
         scroll_area = QScrollArea()
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         scroll_area.setWidgetResizable(True)
 
-        for i in range(10):
-            layout_h = QHBoxLayout()
-            layout_h.setContentsMargins(5, 5, 5, 5)
-            lbl = QLabel()
-            lbl.setText(f"label {i}")
-            lbl.setMinimumHeight(Sizes.widget_min_height)
-
-            btn = QPushButton()
-            btn.setText(f"Переместить")
-            btn.setMaximumWidth(Sizes.widget_min_width)
-            btn.setMinimumHeight(Sizes.widget_min_height)
-
-            layout_h.addWidget(lbl)
-            layout_h.addWidget(btn)
-            layout_center.addLayout(layout_h)
-
-
-
-        # layout_center.addStretch()
-        frame_center.setLayout(layout_center)
-        layout_base.addWidget(frame_center)
-        # layout_base.addLayout(layout_center)
-        layout_base.addStretch()
+        frame_center.setLayout(self.layout_center)
+        self.layout_base.addWidget(frame_center)
+        self.layout_base.addStretch()
 
         widget = QWidget()
         scroll_area.setWidget(widget)
-        widget.setLayout(layout_base)
+        widget.setLayout(self.layout_base)
         self.setCentralWidget(scroll_area)
 
     def get_directory(self):
@@ -166,7 +171,7 @@ class Gui(QMainWindow):
         if Path(selected_dir) != Path('.'):
             self.destination_dir = selected_dir
             self.address_line.setText(selected_dir.as_posix()[1:])
-
+            settings.set_target_folder(selected_dir.as_posix()[1:])
 
     def _disable_cmb_dn(self):
         if self.cmb_days.currentIndex() > 5:
@@ -175,13 +180,8 @@ class Gui(QMainWindow):
         else:
             self.cmb_day_or_night.setEnabled(True)
 
-    def test_progress(self):
-        self.progress.setValue(0)
-        for i in range(11):
-            time.sleep(0.1)
-            self.progress.setValue(i)
-            time.sleep(0.1)
-
+    def closeEvent(self, event):
+        settings.write_settings()
 
 
 def main():

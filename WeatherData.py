@@ -3,7 +3,6 @@ import csv
 import asyncio
 
 from bs4 import BeautifulSoup
-from zope.interface import named
 
 
 class WeatherData:
