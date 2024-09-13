@@ -3,12 +3,14 @@ import csv
 import asyncio
 
 from bs4 import BeautifulSoup
+from zope.interface import named
 
 
 class WeatherData:
 
-    def __init__(self, days):
+    def __init__(self, days: int, nights: bool):
         self.days = days
+        self.nights = nights
 
     def run(self):
         asyncio.run(self.get_weather_data())
@@ -39,3 +41,9 @@ class WeatherData:
             for line in lines:
                 html = await self.get_data(line[2])
                 self.get_info(html)
+
+
+
+if __name__ == '__main__':
+    wd = WeatherData(1, False)
+    wd.run()

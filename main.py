@@ -21,7 +21,8 @@ class Sizes:
     win_y: int = 400
     contents_margins: tuple[int] = (10, 10, 10, 10)
     spacing: int = 5
-    top_widget_min_width: int = 150
+    widget_min_width: int = 150
+    widget_min_height = 30
 
 
 class Color(QWidget):
@@ -46,19 +47,27 @@ class Gui(QMainWindow):
         layout_base = QVBoxLayout()
         layout_base.setContentsMargins(5, 5, 5, 5)
 
+        frame_top = QFrame()
+        frame_top.setFrameStyle(QFrame.StyledPanel | QFrame.Plain)
+
+        frame_center = QFrame()
+        frame_center.setFrameStyle(QFrame.StyledPanel | QFrame.Plain)
+
         layout_top = QVBoxLayout()
+        layout_top.setContentsMargins(15, 5, 15, 5)
 
         layout_top_up = QHBoxLayout()
 
-        layout_top_up.setContentsMargins(*Sizes.contents_margins)
+        layout_top_up.setContentsMargins(0, 5, 0, 10)
         layout_top_up.setSpacing(Sizes.spacing)
 
         layout_days = QHBoxLayout()
-        layout_days.setAlignment(Qt.AlignCenter)
+        layout_days.setAlignment(Qt.AlignLeft)
         lbl_combo = QLabel()
         lbl_combo.setText("Дней: ")
 
-        self.cmb_days.setMinimumWidth(50)
+        self.cmb_days.setMinimumWidth(Sizes.widget_min_width)
+        self.cmb_days.setMinimumHeight(Sizes.widget_min_height)
         self.cmb_days.addItems(list(map(lambda x: str(x), range(1, 15))))
         self.cmb_days.currentIndexChanged.connect(self._disable_cmb_dn)
         layout_days.addWidget(lbl_combo)
@@ -67,26 +76,31 @@ class Gui(QMainWindow):
         layout_dn = QHBoxLayout()
         layout_dn.setAlignment(Qt.AlignCenter)
 
-        self.cmb_day_or_night.setMinimumWidth(100)
+        self.cmb_day_or_night.setMinimumWidth(Sizes.widget_min_width)
         self.cmb_day_or_night.addItems(["Только день", "День и ночь"])
+        self.cmb_day_or_night.setMinimumHeight(Sizes.widget_min_height)
         layout_dn.addWidget(self.cmb_day_or_night)
 
         layout_load = QHBoxLayout()
-        layout_load.setAlignment(Qt.AlignCenter)
+        layout_load.setAlignment(Qt.AlignRight)
         btn_load_data = QPushButton()
-        btn_load_data.setMinimumWidth(120)
+        btn_load_data.setMinimumWidth(Sizes.widget_min_width)
+        btn_load_data.setMinimumHeight(Sizes.widget_min_height)
         btn_load_data.setText("Загрузить данные")
         btn_load_data.clicked.connect(self.test_progress)
         layout_load.addWidget(btn_load_data)
 
         layout_address = QHBoxLayout()
+        layout_address.setContentsMargins(0, 0, 0, 5)
         lbl_address = QLabel()
         lbl_address.setMinimumWidth(250)
-        layout_address.setAlignment(Qt.AlignRight)
+        lbl_address.setMinimumHeight(Sizes.widget_min_height)
         lbl_address.setText("c:\\program flies\\some folder")
 
         btn_address = QPushButton()
         btn_address.setText("Выбрать папку")
+        btn_address.setMaximumWidth(Sizes.widget_min_width)
+        btn_address.setMinimumHeight(Sizes.widget_min_height)
 
         layout_address.addWidget(lbl_address)
         layout_address.addWidget(btn_address)
@@ -94,12 +108,15 @@ class Gui(QMainWindow):
         layout_top_up.addLayout(layout_days)
         layout_top_up.addLayout(layout_dn)
         layout_top_up.addLayout(layout_load)
-        layout_top_up.addLayout(layout_address)
+        layout_top.addLayout(layout_top_up)
+        layout_top.addLayout(layout_address)
 
         layout_center = QVBoxLayout()
-        layout_center.setContentsMargins(*Sizes.contents_margins)
+        layout_center.setContentsMargins(10, 5, 10, 5)
         layout_center.setSpacing(Sizes.spacing)
-        layout_base.addLayout(layout_top_up)
+        frame_top.setLayout(layout_top)
+        layout_base.addWidget(frame_top)
+        # layout_base.addLayout(layout_top_up)
 
         self.progress = QProgressBar()
         self.progress.setTextVisible(False)
@@ -115,20 +132,27 @@ class Gui(QMainWindow):
 
         for i in range(10):
             layout_h = QHBoxLayout()
+            layout_h.setContentsMargins(5, 5, 5, 5)
             lbl = QLabel()
             lbl.setText(f"label {i}")
-            lbl.setMinimumHeight(50)
+            lbl.setMinimumHeight(Sizes.widget_min_height)
 
             btn = QPushButton()
             btn.setText(f"Переместить")
-            btn.setMaximumWidth(Sizes.top_widget_min_width)
+            btn.setMaximumWidth(Sizes.widget_min_width)
+            btn.setMinimumHeight(Sizes.widget_min_height)
 
             layout_h.addWidget(lbl)
             layout_h.addWidget(btn)
             layout_center.addLayout(layout_h)
 
-        layout_center.addStretch()
-        layout_base.addLayout(layout_center)
+
+
+        # layout_center.addStretch()
+        frame_center.setLayout(layout_center)
+        layout_base.addWidget(frame_center)
+        # layout_base.addLayout(layout_center)
+        layout_base.addStretch()
 
         widget = QWidget()
         scroll_area.setWidget(widget)
