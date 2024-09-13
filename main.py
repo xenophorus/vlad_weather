@@ -1,12 +1,16 @@
 from dataclasses import dataclass
 
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                               QPushButton, QLabel, QScrollArea, QComboBox, QProgressBar, QFrame)
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
+                               QPushButton, QLabel, QScrollArea, QComboBox, QProgressBar, QFrame, QLineEdit)
 from PySide6.QtCore import QSize, Qt
 
-from PySide6.QtGui import QPalette, QColor
+from PySide6.QtGui import QPalette, QColor, QCloseEvent
+
+from pathlib import Path
 
 import time
+
+from Settings import settings
 
 '''
 TODO
@@ -25,17 +29,6 @@ class Sizes:
     widget_min_height = 30
 
 
-class Color(QWidget):
-
-    def __init__(self, color):
-        super(Color, self).__init__()
-        self.setAutoFillBackground(True)
-
-        palette = self.palette()
-        palette.setColor(QPalette.Window, QColor(color))
-        self.setPalette(palette)
-
-
 class Gui(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -43,6 +36,7 @@ class Gui(QMainWindow):
         self.setMinimumSize(QSize(Sizes.win_x, Sizes.win_y))
         self.cmb_days = QComboBox()
         self.cmb_day_or_night = QComboBox()
+        self.destination_dir = Path(settings.get("last_path"))
 
         layout_base = QVBoxLayout()
         layout_base.setContentsMargins(5, 5, 5, 5)
@@ -92,17 +86,21 @@ class Gui(QMainWindow):
 
         layout_address = QHBoxLayout()
         layout_address.setContentsMargins(0, 0, 0, 5)
-        lbl_address = QLabel()
-        lbl_address.setMinimumWidth(250)
-        lbl_address.setMinimumHeight(Sizes.widget_min_height)
-        lbl_address.setText("c:\\program flies\\some folder")
+        self.address_line = QLineEdit()
+        self.address_line.setMinimumHeight(Sizes.widget_min_height)
+        self.address_line.setText(self.destination_dir.as_posix())
+        self.lbl_address = QLabel()
+        self.lbl_address.setMinimumWidth(250)
+        self.lbl_address.setMinimumHeight(Sizes.widget_min_height)
+        self.lbl_address.setText(self.destination_dir.as_posix())
 
         btn_address = QPushButton()
         btn_address.setText("Выбрать папку")
         btn_address.setMaximumWidth(Sizes.widget_min_width)
         btn_address.setMinimumHeight(Sizes.widget_min_height)
+        btn_address.clicked.connect(self.get_directory)
 
-        layout_address.addWidget(lbl_address)
+        layout_address.addWidget(self.address_line)
         layout_address.addWidget(btn_address)
 
         layout_top_up.addLayout(layout_days)
@@ -158,6 +156,16 @@ class Gui(QMainWindow):
         scroll_area.setWidget(widget)
         widget.setLayout(layout_base)
         self.setCentralWidget(scroll_area)
+
+    def get_directory(self):
+        dialog = QFileDialog()
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setDirectoryUrl(self.destination_dir.as_posix())
+        selected_dir = Path(dialog.getExistingDirectoryUrl().path())
+
+        if Path(selected_dir) != Path('.'):
+            self.destination_dir = selected_dir
+            self.address_line.setText(selected_dir.as_posix()[1:])
 
 
     def _disable_cmb_dn(self):
