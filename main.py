@@ -6,6 +6,7 @@ from pathlib import Path
 import time
 from Settings import settings
 from WeatherData import WeatherData
+import random
 
 '''
 TODO
@@ -37,32 +38,31 @@ class Gui(QMainWindow):
         self.destination_dir = Path(settings.get_target_folder())
         self.layout_base = QVBoxLayout()
         self.layout_center = QVBoxLayout()
-
         self.setup_widgets()
+        self.items_to_remove = list()
         # self.get_forecast()
 
     def get_forecast(self):
-        [self.layout_center.removeItem(x) for x in self.layout_center.children()]
-        self.layout_center.update()
+
         time.sleep(0.5)
         self.progress.setValue(0)
         self.progress.setRange(0, 9)
+        [x.setParent(None) for x in self.items_to_remove]
 
-        for i in range(10):
+        for i in range(random.randint(5, 10)):
             time.sleep(0.3)
             layout_h = QHBoxLayout()
             layout_h.setContentsMargins(5, 5, 5, 5)
             lbl = QLabel()
             lbl.setText(f"label {i} {time.time()}")
             lbl.setMinimumHeight(Sizes.widget_min_height)
-
             btn = QPushButton()
             btn.setText(f"Переместить")
             btn.setMaximumWidth(Sizes.widget_min_width)
             btn.setMinimumHeight(Sizes.widget_min_height)
-
             layout_h.addWidget(lbl)
             layout_h.addWidget(btn)
+            self.items_to_remove += [layout_h, lbl, btn]
             self.layout_center.addLayout(layout_h)
             self.progress.setValue(i)
 
