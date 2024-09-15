@@ -32,9 +32,13 @@ class Gui(QMainWindow):
         super().__init__()
         self.setWindowTitle("Погода по районам Владивостока")
         self.setMinimumSize(QSize(Sizes.win_x, Sizes.win_y))
+        self.days = settings.get_days()
+        self.nights = settings.get_nights()
         self.cmb_days = QComboBox()
         self.cmb_day_or_night = QComboBox()
         self.progress = QProgressBar()
+        self.address_line = QLineEdit()
+        self.lbl_address = QLabel()
         self.destination_dir = Path(settings.get_target_folder())
         self.layout_base = QVBoxLayout()
         self.layout_center = QVBoxLayout()
@@ -43,8 +47,7 @@ class Gui(QMainWindow):
         # self.get_forecast()
 
     def get_forecast(self):
-
-        time.sleep(0.5)
+        time.sleep(0.2)
         self.progress.setValue(0)
         self.progress.setRange(0, 9)
         [x.setParent(None) for x in self.items_to_remove]
@@ -114,10 +117,10 @@ class Gui(QMainWindow):
 
         layout_address = QHBoxLayout()
         layout_address.setContentsMargins(0, 0, 0, 5)
-        self.address_line = QLineEdit()
+
         self.address_line.setMinimumHeight(Sizes.widget_min_height)
         self.address_line.setText(self.destination_dir.as_posix())
-        self.lbl_address = QLabel()
+
         self.lbl_address.setMinimumWidth(250)
         self.lbl_address.setMinimumHeight(Sizes.widget_min_height)
         self.lbl_address.setText(self.destination_dir.as_posix())
@@ -127,10 +130,8 @@ class Gui(QMainWindow):
         btn_address.setMaximumWidth(Sizes.widget_min_width)
         btn_address.setMinimumHeight(Sizes.widget_min_height)
         btn_address.clicked.connect(self.get_directory)
-
         layout_address.addWidget(self.address_line)
         layout_address.addWidget(btn_address)
-
         layout_top_up.addLayout(layout_days)
         layout_top_up.addLayout(layout_dn)
         layout_top_up.addLayout(layout_load)
