@@ -93,7 +93,7 @@ class Gui(QMainWindow):
 
         self.cmb_days.setMinimumWidth(Sizes.widget_min_width)
         self.cmb_days.setMinimumHeight(Sizes.widget_min_height)
-        self.cmb_days.addItems(list(map(lambda x: str(x), range(1, 15))))
+        self.cmb_days.addItems(list(map(lambda x: str(x), range(1, 14))))
         self.cmb_days.currentIndexChanged.connect(self._disable_cmb_dn)
         layout_days.addWidget(lbl_combo)
         layout_days.addWidget(self.cmb_days)
