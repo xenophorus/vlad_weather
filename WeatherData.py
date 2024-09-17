@@ -40,8 +40,8 @@ class WeatherData:
             season = self._get_season(day_date.month)
             date_ = f"{day_date.day} {self._get_month(day_date.month)}"
             weekday = calendar.day_name[day_date.weekday()]
-            region_num: int
-            region_name : str
+            region_num: int = region_num #!
+            region_name : region #!
             temp_real: str
             temp_feel: str
             weather_num: int
