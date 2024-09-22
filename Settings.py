@@ -18,9 +18,10 @@ class Settings:
             self._nights = bool(_settings.get("nights"))
 
     def write_settings(self) -> None:
-        data = (f"last_path: '{self._target_folder}'\n"
-                f"days: {self._days}"
-                f"nights: {bool(self._nights)}")
+        data = (f"urls_file: '{self.urls_file}'\n"
+                f"last_path: '{self._target_folder}'\n"
+                f"days: {self._days}\n"
+                f"nights: {bool(self._nights)}\n")
         with open("settings/settings.yml", "w", encoding="utf-8") as settings_file:
             settings_file.write(data)
 
