@@ -44,6 +44,6 @@ class DiskIO:
 
     @staticmethod
     def move_file(file, source, destination) -> None:
-        file_src = Path(source) / file + ".csv"
-        file_dest = Path(destination) / file + ".csv"
+        file_src = Path(source) / file
+        file_dest = Path(destination)
         shutil.move(file_src, file_dest)

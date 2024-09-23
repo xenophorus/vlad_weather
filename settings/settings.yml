@@ -1,4 +1,4 @@
 urls_file: './towns.csv'
-last_path: '/D:/alex/pogada/DFO'
-days: 4
+last_path: 'D:/alex'
+days: 5
 nights: False

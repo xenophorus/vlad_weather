@@ -5,6 +5,7 @@ from datetime import date, timedelta
 import locale
 import calendar
 import asyncio
+import dateparser
 
 from bs4 import BeautifulSoup
 
@@ -38,7 +39,9 @@ class WeatherData(QRunnable):
         day_times = ("night", "morning", "day", "evening",)
         soup = BeautifulSoup(html, "lxml")
         forecast = soup.findAll('table', attrs={'class': 'data'})
-        for day_time in range(len(forecast)):
+        if len(forecast) < self.days:
+            self.days = len(forecast)
+        for day_time in range(self.days):
             day_date = date.today() + timedelta(days=day_time)
             day = forecast[day_time]
             weather = [x.find("div").text for x in
@@ -95,3 +98,12 @@ class WeatherData(QRunnable):
             return str(calendar.month_name[month]) + "а"
         else:
             return str(calendar.month_name[month])[:-1] + "я"
+
+
+wd = WeatherData(5, True,
+                 "https://primpogoda.ru/weather/vladivostok/vladivostok_ugolnaya/",
+                 "5", "Vtoryak")
+
+wd.run()
+
+print(1)

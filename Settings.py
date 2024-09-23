@@ -14,7 +14,10 @@ class Settings:
             _settings = yaml.safe_load(settings_file.read())
             self.urls_file = _settings.get("urls_file")
             self._target_folder = _settings.get("last_path")
-            self._days = _settings.get("days")
+            if not _settings.get("days"):
+                self._days = 2
+            else:
+                self._days = _settings.get("days")
             self._nights = bool(_settings.get("nights"))
 
     def write_settings(self) -> None:
