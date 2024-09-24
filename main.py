@@ -1,21 +1,11 @@
 from dataclasses import dataclass
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
                                QPushButton, QLabel, QScrollArea, QComboBox, QProgressBar, QFrame, QLineEdit)
-from PySide6.QtCore import QSize, Qt, QRunnable, QThreadPool
+from PySide6.QtCore import QSize, Qt, QRunnable, QThreadPool, Slot
 from pathlib import Path
-import time
 from Settings import settings
 from WeatherData import WeatherData
 from DiskIO import DiskIO
-import random
-
-'''
-TODO
-Weather class gets only one forecast at a time. Gather? Async?
-progressbar alpha? Over? gets forecast 
-write and read class 
-
-'''
 
 
 @dataclass
@@ -87,10 +77,13 @@ class Gui(QMainWindow, QRunnable):
         self.btn_address.setEnabled(self.control_state)
         self.btn_load_data.setEnabled(self.control_state)
 
+    def clear_file_list(self):
+        [x.setParent(None) for x in self.items_to_remove]
+
+    @Slot()
     def get_forecast(self):
         self.switch_controls()
-
-        [x.setParent(None) for x in self.items_to_remove]
+        self.clear_file_list()
         forecast = dict()
         days = int(self.cmb_days.currentText())
 
@@ -113,16 +106,19 @@ class Gui(QMainWindow, QRunnable):
         self.switch_controls()
         self.list_files()
 
+    def command(self):
+        sender = self.sender()
+        DiskIO.move_file(sender.objectName(), self.tmp_dir, self.destination_dir)
+        sender.setEnabled(False)
+
+
     def list_files(self):
         files = list(self.tmp_dir.iterdir())
         for file in files:
             lbl = QLabel()
             btn = QPushButton()
-
-            def command():
-                DiskIO.move_file(lbl.text(), self.tmp_dir, self.destination_dir)
-                lbl.setText("Файл перемещен!")
-                btn.setEnabled(False)
+            btn.setObjectName(file.name)
+            lbl.setObjectName(file.stem)
 
             layout_h = QHBoxLayout()
             layout_h.setContentsMargins(5, 5, 5, 5)
@@ -131,10 +127,11 @@ class Gui(QMainWindow, QRunnable):
             btn.setMaximumWidth(Sizes.widget_min_width)
             btn.setMinimumHeight(Sizes.widget_min_height)
             lbl.setText(file.name)
+
             layout_h.addWidget(lbl)
             layout_h.addWidget(btn)
 
-            btn.clicked.connect(command)
+            btn.clicked.connect(self.command)
 
             self.items_to_remove += [layout_h, lbl, btn]
             self.layout_center.addLayout(layout_h)

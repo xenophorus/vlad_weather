@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import locale
 import calendar
 import asyncio
-import dateparser
+# import dateparser
 
 from bs4 import BeautifulSoup
 
@@ -16,7 +16,6 @@ class WeatherData(QRunnable):
 
     def __init__(self, days: int, nights: bool, url: str, region_num: str, region: str):
         super().__init__()
-        self.threadpool = QThreadPool()
         self.days = days
         self.nights = nights
         self.url = url
@@ -24,6 +23,7 @@ class WeatherData(QRunnable):
         self.region_num = region_num
         self.forecast = dict()
 
+    @Slot()
     def run(self):
         asyncio.run(self.get_weather_data())
 
@@ -46,6 +46,7 @@ class WeatherData(QRunnable):
             day = forecast[day_time]
             weather = [x.find("div").text for x in
                        day.findAll("tr", attrs={"class": "weather"})[0].findAll("td")[1:]]
+            icons = [x.attrs.get("src").split("_")[-2] for x in day.findAll("img", attrs={"class":"icon"})]
             # precipitation = [x.text.strip() for x in
             #                  day.findAll("tr", attrs={"class": "precipitation"})[0].findAll("td")[1:]]
             temperature = [x.find("div", attrs={"class": "show-for-small-only"}).text for x in
@@ -67,9 +68,9 @@ class WeatherData(QRunnable):
                             "weekday": calendar.day_name[day_date.weekday()],
                             "region_num": region_num,
                             "region_name": region,
-                            "temp_real": temperature[i],
-                            "temp_feel": feeled_temperature[i],
-                            "weather_num": "",
+                            "temp_real": f"{temperature[i]}C",
+                            "temp_feel": f"{feeled_temperature[i]}C",
+                            "weather_num": self.weather_by_code(int(icons[i])),
                             "weather_text": weather[i],
                             "humidity": humidity[i],
                             "wind_text": wind[i][0],
@@ -78,6 +79,25 @@ class WeatherData(QRunnable):
                         }
                     }
                 })
+
+    def weather_by_code(self, code: int) -> int:
+        weather = {1: (1, 2), #ясно
+                   3: (22, 19, 10), #облачно
+                   4: (33, 23), #слабый дождь
+                   5: (31,), #дождь
+                   6: (25,), #сильный дождь
+                   7: (34, 24), #слабый снег
+                   8: (32,), #снег
+                   9: (29, 26,), #сильный снег
+                   10: (30, 28, 27,), #гроза
+                   11: (35,), #смешанные осадки
+                   # 2: "переменная облачность",
+                   }
+        for k, v in weather.items():
+            if code in v:
+                return k
+        return 2
+
 
     async def get_weather_data(self):
         html = await self.get_data(self.url + "/.week")

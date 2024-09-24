@@ -1,4 +1,3 @@
-from dataclasses import fields
 from pathlib import Path
 import shutil
 import csv
@@ -13,8 +12,6 @@ class DiskIO:
             with file.open("r", encoding="utf-8") as f:
                 lines = csv.DictReader(f)
                 return list(lines)
-                # for line in csv.DictReader(f):
-                #     yield line
         except FileNotFoundError as fnf:
             return ["Error", fnf.strerror]
         except Exception as e:
@@ -37,7 +34,7 @@ class DiskIO:
         with file.open("w", encoding="utf-8") as csv_file:
             regions = list(data_dict.values())
             field_names = list(regions[0].keys())
-            csv_writer = csv.DictWriter(csv_file, fieldnames=field_names)
+            csv_writer = csv.DictWriter(csv_file, fieldnames=field_names, dialect='unix')
             csv_writer.writeheader()
             for region in regions:
                 csv_writer.writerow(region)
@@ -45,5 +42,5 @@ class DiskIO:
     @staticmethod
     def move_file(file, source, destination) -> None:
         file_src = Path(source) / file
-        file_dest = Path(destination)
+        file_dest = Path(destination) / f"gorod_{file.split("_")[1]}"
         shutil.move(file_src, file_dest)
