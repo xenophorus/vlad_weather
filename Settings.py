@@ -1,16 +1,27 @@
 import yaml
+from pathlib import Path
 
 
 class Settings:
     def __init__(self):
-        self.urls_file = ""
+        self.urls_file = "towns.csv"
         self._target_folder: str = "~"
         self._days: int = 0
         self._nights: bool = False
-        self._get_settings()
+        self.settings_file = Path.cwd() / "settings/settings.yml"
+        self.check_settings_file()
+
+    def check_settings_file(self):
+        if not self.settings_file.exists():
+            self.urls_file = "towns.csv"
+            self._target_folder = str(Path.cwd())
+            self._days = 3
+            self._nights = True
+        else:
+            self._get_settings()
 
     def _get_settings(self) -> None:
-        with open("settings/settings.yml", "r", encoding="utf-8") as settings_file:
+        with open(self.settings_file, "r", encoding="utf-8") as settings_file:
             _settings = yaml.safe_load(settings_file.read())
             self.urls_file = _settings.get("urls_file")
             self._target_folder = _settings.get("last_path")
@@ -21,11 +32,13 @@ class Settings:
             self._nights = bool(_settings.get("nights"))
 
     def write_settings(self) -> None:
+        if not self.settings_file.exists():
+            settings.settings_file.parent.mkdir(exist_ok=True, parents=True)
         data = (f"urls_file: '{self.urls_file}'\n"
                 f"last_path: '{self._target_folder}'\n"
                 f"days: {self._days}\n"
                 f"nights: {bool(self._nights)}\n")
-        with open("settings/settings.yml", "w", encoding="utf-8") as settings_file:
+        with open(self.settings_file, "w", encoding="utf-8") as settings_file:
             settings_file.write(data)
 
     def get_target_folder(self) -> str:

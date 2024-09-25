@@ -1,4 +1,4 @@
-urls_file: './towns.csv'
-last_path: 'D:/alex/pogada/11111/ДФО/01-jan'
-days: 3
-nights: True
+urls_file: 'towns.csv'
+last_path: 'D:\output'
+days: 2
+nights: False

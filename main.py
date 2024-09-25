@@ -8,8 +8,10 @@ from pathlib import Path
 from Settings import settings
 from WeatherData import WeatherData
 from DiskIO import DiskIO
-import time
 
+'''
+nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 .\main.py
+'''
 
 @dataclass
 class Sizes:
@@ -61,10 +63,12 @@ class Gui(QMainWindow):
 
     def forecast_thread(self):
         self.get_url_data()
+        print(self.data[0])
         self.switch_controls()
         self.hide_controls()
         self.clear_tmp_dir()
-        self.threadpool.start(self.get_forecast)
+        # self.threadpool.start(self.get_forecast)
+        self.get_forecast()
         self.switch_controls()
 
     def progress_bar_increment(self):
@@ -78,7 +82,6 @@ class Gui(QMainWindow):
         self.data = data
 
     def switch_controls(self):
-
         self.control_state = not self.control_state
         self.cmb_day_or_night.setEnabled(self.control_state)
         self.cmb_days.setEnabled(self.control_state)
@@ -238,7 +241,7 @@ class Gui(QMainWindow):
         self.layout_base.addWidget(frame_top)
 
         self.progress.setTextVisible(False)
-        self.progress.setMaximumHeight(10)
+        self.progress.setFixedHeight(20)
         self.progress.setValue(0)
 
         self.layout_base.addWidget(self.progress)

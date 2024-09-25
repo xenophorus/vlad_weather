@@ -1,7 +1,7 @@
 from PySide6.QtCore import QRunnable, Slot
 
 import requests
-from datetime import date, timedelta
+from datetime import timedelta
 import locale
 import calendar
 import asyncio
@@ -61,6 +61,7 @@ class WeatherData(QRunnable):
             humidity = [x.string for x in day.findAll("tr", attrs={"class": "humidity"})[0].findAll("td")[1:]]
 
             for i in indexes:
+                print(f"{region} {day_date.day}")
                 self.forecast.update({
                     day_date.strftime(f"%Y-%m-%d_{day_times[i]}"): {
                         int(f"{self.region_num}"): {
