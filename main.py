@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
                                QPushButton, QLabel, QScrollArea, QComboBox, QProgressBar, QFrame, QLineEdit)
 from PySide6.QtCore import QSize, Qt, QRunnable, QThreadPool, Slot
@@ -6,6 +8,7 @@ from pathlib import Path
 from Settings import settings
 from WeatherData import WeatherData
 from DiskIO import DiskIO
+import time
 
 
 @dataclass
@@ -18,10 +21,11 @@ class Sizes:
     widget_min_height: int = 30
 
 
-class Gui(QMainWindow, QRunnable):
+class Gui(QMainWindow):
     def __init__(self):
         super().__init__()
         self.threadpool = QThreadPool()
+        self.widget = QWidget()
         self.setWindowTitle("Погода по районам Владивостока")
         self.setMinimumSize(QSize(Sizes.win_x, Sizes.win_y))
         self.days = settings.get_days()
@@ -29,7 +33,6 @@ class Gui(QMainWindow, QRunnable):
         self.cmb_days = QComboBox()
         self.cmb_day_or_night = QComboBox()
         self.progress = QProgressBar()
-        # self.address_line = QLineEdit()
         self.lbl_address = QLabel()
         self.layout_base = QVBoxLayout()
         self.layout_center = QVBoxLayout()
@@ -38,6 +41,7 @@ class Gui(QMainWindow, QRunnable):
         self.destination_dir = Path("/")
         self.tmp_dir = Path.cwd() / "tmp"
         self.data = None
+        self.triples = list()
         self.control_state = True
         self.setup_widgets()
         self.load_settings()
@@ -45,7 +49,7 @@ class Gui(QMainWindow, QRunnable):
         self.list_files()
 
     def save_settings(self):
-        settings.set_days(self.cmb_days.currentText())
+        settings.set_days(self.cmb_days.currentIndex())
         settings.set_nights(self.cmb_day_or_night.currentIndex())
         settings.set_target_folder(str(self.destination_dir))
         settings.write_settings()
@@ -58,7 +62,11 @@ class Gui(QMainWindow, QRunnable):
 
     def forecast_thread(self):
         self.get_url_data()
-        self.get_forecast()
+        self.switch_controls()
+        self.hide_controls()
+        self.clear_tmp_dir()
+        self.threadpool.start(self.get_forecast)
+        self.switch_controls()
 
     def progress_bar_increment(self):
         self.progress.setValue(self.progress.value() + 1)
@@ -77,13 +85,10 @@ class Gui(QMainWindow, QRunnable):
         self.btn_address.setEnabled(self.control_state)
         self.btn_load_data.setEnabled(self.control_state)
 
-    def clear_file_list(self):
-        [x.setParent(None) for x in self.items_to_remove]
 
     @Slot()
     def get_forecast(self):
-        self.switch_controls()
-        self.clear_file_list()
+
         forecast = dict()
         days = int(self.cmb_days.currentText())
 
@@ -91,34 +96,39 @@ class Gui(QMainWindow, QRunnable):
             wd = WeatherData(days, self.nights, line.get("url"), line.get("num"), line.get("town"))
             wd.run()
 
-            if forecast:
-                for key in forecast.keys():
+            for key, value in wd.forecast.items():
+                if forecast.get(key):
                     forecast[key].update(wd.forecast[key])
-            else:
-                forecast.update(wd.forecast)
+                else:
+                    forecast[key] = wd.forecast.get(key)
 
             self.progress_bar_increment()
 
-
         for date_data in forecast.items():
-            DiskIO.write_csv(date_data, str(self.tmp_dir))
+            tomorrow = datetime.today().date() + timedelta(days=1)
+            this_date = datetime.strptime(date_data[0].split("_")[0], "%Y-%m-%d").date()
+            if this_date >= tomorrow:
+                DiskIO.write_csv(date_data, str(self.tmp_dir))
 
-        self.switch_controls()
         self.list_files()
 
     def command(self):
         sender = self.sender()
         DiskIO.move_file(sender.objectName(), self.tmp_dir, self.destination_dir)
+        sender.setText("Файл перемещен")
         sender.setEnabled(False)
 
-
-    def list_files(self):
+    def clear_tmp_dir(self):
         files = list(self.tmp_dir.iterdir())
         for file in files:
+            DiskIO.delete_file(file.name, self.tmp_dir)
+
+    def list_items(self):
+        for i in range(12):
             lbl = QLabel()
             btn = QPushButton()
-            btn.setObjectName(file.name)
-            lbl.setObjectName(file.stem)
+            btn.setObjectName(f"btn_{i}")
+            lbl.setObjectName(f"lbl_{i}")
 
             layout_h = QHBoxLayout()
             layout_h.setContentsMargins(5, 5, 5, 5)
@@ -126,16 +136,41 @@ class Gui(QMainWindow, QRunnable):
             btn.setText(f"Переместить")
             btn.setMaximumWidth(Sizes.widget_min_width)
             btn.setMinimumHeight(Sizes.widget_min_height)
-            lbl.setText(file.name)
 
             layout_h.addWidget(lbl)
             layout_h.addWidget(btn)
 
+            btn.setVisible(False)
+            lbl.setVisible(False)
+
             btn.clicked.connect(self.command)
 
-            self.items_to_remove += [layout_h, lbl, btn]
             self.layout_center.addLayout(layout_h)
+            self.triples.append((btn, lbl, layout_h))
 
+    def hide_controls(self):
+        for triple in self.triples:
+            button, label, layout = triple
+            label.setVisible(False)
+            button.setVisible(False)
+            button.setText(f"Переместить")
+            button.setEnabled(True)
+        #     button.setParent(None)
+        #     label.setParent(None)
+        #     layout.setParent(None)
+        # self.list_items()
+
+    def list_files(self):
+        files = list(self.tmp_dir.iterdir())
+        for i in range(len(files)):
+            button, label, _ = self.triples[i]
+            file = files[i]
+
+            label.setText(file.name)
+            button.setObjectName(file.name)
+
+            label.setVisible(True)
+            button.setVisible(True)
 
     def setup_widgets(self):
         self.layout_base.setContentsMargins(5, 5, 5, 5)
@@ -157,8 +192,7 @@ class Gui(QMainWindow, QRunnable):
 
         self.cmb_days.setMinimumWidth(Sizes.widget_min_width)
         self.cmb_days.setMinimumHeight(Sizes.widget_min_height)
-        self.cmb_days.addItems(list(map(lambda x: str(x), range(1, 6))))
-        # self.cmb_days.currentIndexChanged.connect(self._disable_cmb_dn)
+        self.cmb_days.addItems(list(map(lambda x: str(x), range(1, 5))))
         layout_days.addWidget(lbl_combo)
         layout_days.addWidget(self.cmb_days)
 
@@ -217,9 +251,11 @@ class Gui(QMainWindow, QRunnable):
         self.layout_base.addWidget(frame_center)
         self.layout_base.addStretch()
 
-        widget = QWidget()
-        scroll_area.setWidget(widget)
-        widget.setLayout(self.layout_base)
+        self.list_items()
+
+        # widget = QWidget()
+        scroll_area.setWidget(self.widget)
+        self.widget.setLayout(self.layout_base)
         self.setCentralWidget(scroll_area)
 
     def set_day_or_night(self):
@@ -236,13 +272,6 @@ class Gui(QMainWindow, QRunnable):
             self.lbl_address.setText(str(selected_dir))
             settings.set_target_folder(str(selected_dir))
 
-    def _disable_cmb_dn(self):
-        if self.cmb_days.currentIndex() > 5:
-            self.cmb_day_or_night.setCurrentIndex(0)
-            self.cmb_day_or_night.setDisabled(True)
-        else:
-            self.cmb_day_or_night.setEnabled(True)
-
     def closeEvent(self, event):
         self.save_settings()
 
@@ -250,7 +279,6 @@ class Gui(QMainWindow, QRunnable):
 def main():
     app = QApplication([])
     window = Gui()
-
     window.show()
     app.exec()
 

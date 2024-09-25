@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import shutil
 import csv
@@ -16,6 +17,11 @@ class DiskIO:
             return ["Error", fnf.strerror]
         except Exception as e:
             return ["Error", f"{e.__class__}"]
+
+    @staticmethod
+    def delete_file(file_name, file_path):
+        file = Path(file_path) / file_name
+        os.remove(file)
 
     @staticmethod
     def write_file(data, destination, file_name) -> None:

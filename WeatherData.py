@@ -1,11 +1,11 @@
-from PySide6.QtCore import QRunnable, Slot, QThreadPool
+from PySide6.QtCore import QRunnable, Slot
 
 import requests
 from datetime import date, timedelta
 import locale
 import calendar
 import asyncio
-# import dateparser
+import dateparser
 
 from bs4 import BeautifulSoup
 
@@ -39,10 +39,11 @@ class WeatherData(QRunnable):
         day_times = ("night", "morning", "day", "evening",)
         soup = BeautifulSoup(html, "lxml")
         forecast = soup.findAll('table', attrs={'class': 'data'})
+        start_date = dateparser.parse(soup.find("h3").text.split(',')[0]).date()
         if len(forecast) < self.days:
             self.days = len(forecast)
-        for day_time in range(self.days):
-            day_date = date.today() + timedelta(days=day_time)
+        for day_time in range(self.days + 1):
+            day_date = start_date + timedelta(days=day_time)
             day = forecast[day_time]
             weather = [x.find("div").text for x in
                        day.findAll("tr", attrs={"class": "weather"})[0].findAll("td")[1:]]
@@ -120,10 +121,10 @@ class WeatherData(QRunnable):
             return str(calendar.month_name[month])[:-1] + "я"
 
 
-wd = WeatherData(5, True,
-                 "https://primpogoda.ru/weather/vladivostok/vladivostok_ugolnaya/",
-                 "5", "Vtoryak")
 
-wd.run()
-
-print(1)
+if __name__ == '__main__':
+    wd = WeatherData(5, True,
+                     "https://primpogoda.ru/weather/vladivostok/vladivostok_ugolnaya/",
+                     "5", "Vtoryak")
+    wd.run()
+    print(1)
