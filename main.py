@@ -13,8 +13,8 @@ import time
 
 @dataclass
 class Sizes:
-    win_x: int = 750
-    win_y: int = 400
+    win_x: int = 650
+    win_y: int = 500
     contents_margins: tuple[int] = (10, 10, 10, 10)
     spacing: int = 5
     widget_min_width: int = 150
@@ -45,7 +45,6 @@ class Gui(QMainWindow):
         self.control_state = True
         self.setup_widgets()
         self.load_settings()
-        self.items_to_remove = list()
         self.list_files()
 
     def save_settings(self):
@@ -79,6 +78,7 @@ class Gui(QMainWindow):
         self.data = data
 
     def switch_controls(self):
+
         self.control_state = not self.control_state
         self.cmb_day_or_night.setEnabled(self.control_state)
         self.cmb_days.setEnabled(self.control_state)
