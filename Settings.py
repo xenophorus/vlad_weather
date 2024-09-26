@@ -4,21 +4,24 @@ from pathlib import Path
 
 class Settings:
     def __init__(self):
-        self.urls_file = "towns.csv"
+        self.urls_file = "input/towns.csv"
         self._target_folder: str = "~"
         self._days: int = 0
         self._nights: bool = False
         self.settings_file = Path.cwd() / "settings/settings.yml"
         self.check_settings_file()
+        self._get_settings()
 
-    def check_settings_file(self):
+    def check_settings_file(self, bind=True, create=True):
         if not self.settings_file.exists():
-            self.urls_file = "towns.csv"
-            self._target_folder = str(Path.cwd())
-            self._days = 3
-            self._nights = True
-        else:
-            self._get_settings()
+            self.settings_file.parent.mkdir(exist_ok=True, parents=True)
+            if bind:
+                self.urls_file = "input/towns.csv"
+                self._target_folder = str(Path.cwd())
+                self._days = 3
+                self._nights = True
+            if create:
+                self.write_settings()
 
     def _get_settings(self) -> None:
         with open(self.settings_file, "r", encoding="utf-8") as settings_file:
@@ -32,8 +35,7 @@ class Settings:
             self._nights = bool(_settings.get("nights"))
 
     def write_settings(self) -> None:
-        if not self.settings_file.exists():
-            settings.settings_file.parent.mkdir(exist_ok=True, parents=True)
+        self.check_settings_file(bind=False, create=False)
         data = (f"urls_file: '{self.urls_file}'\n"
                 f"last_path: '{self._target_folder}'\n"
                 f"days: {self._days}\n"
@@ -61,4 +63,3 @@ class Settings:
 
 
 settings = Settings()
-print(1)

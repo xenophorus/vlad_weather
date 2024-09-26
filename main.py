@@ -9,9 +9,8 @@ from Settings import settings
 from WeatherData import WeatherData
 from DiskIO import DiskIO
 
-'''
-nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 .\main.py
-'''
+# nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 .\main.py
+
 
 @dataclass
 class Sizes:
@@ -42,6 +41,7 @@ class Gui(QMainWindow):
         self.btn_address = QPushButton()
         self.destination_dir = Path("/")
         self.tmp_dir = Path.cwd() / "tmp"
+        self.tmp_dir.mkdir(parents=True, exist_ok=True)
         self.data = None
         self.triples = list()
         self.control_state = True
@@ -63,12 +63,12 @@ class Gui(QMainWindow):
 
     def forecast_thread(self):
         self.get_url_data()
-        print(self.data[0])
+        # print(self.data[0])
         self.switch_controls()
         self.hide_controls()
         self.clear_tmp_dir()
-        # self.threadpool.start(self.get_forecast)
-        self.get_forecast()
+        self.threadpool.start(self.get_forecast)
+        # self.get_forecast()
         self.switch_controls()
 
     def progress_bar_increment(self):

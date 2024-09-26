@@ -1,18 +1,19 @@
+from calendar import month
+
 from PySide6.QtCore import QRunnable, Slot
 
 import requests
-from datetime import timedelta
+from datetime import timedelta, datetime
 import locale
 import calendar
 import asyncio
-import dateparser
 
 from bs4 import BeautifulSoup
 
 # https://www.pythonguis.com/tutorials/multithreading-pyside6-applications-qthreadpool/
 
 class WeatherData(QRunnable):
-    locale.setlocale(locale.LC_ALL, "ru_RU")
+    locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
 
     def __init__(self, days: int, nights: bool, url: str, region_num: str, region: str):
         super().__init__()
@@ -34,12 +35,23 @@ class WeatherData(QRunnable):
         data = requests.get(url=url, headers=headers).text
         return data
 
+    def month_normalizer(self, dt: str) -> datetime:
+        day_, m = dt.split(" ")
+        if m == "мая":
+            month_ = "май"
+        elif m == "августа" or m == "марта":
+            month_ = m[:-1]
+        else:
+            month_ = m[:-1] + "ь"
+
+        return datetime.strptime(f"{day_} {month_[:3]} {datetime.today().year}", "%d %b %Y")
+
     def get_info_nights(self, html, region_num, region):
         indexes = [0, 2] if self.nights else [2]
         day_times = ("night", "morning", "day", "evening",)
         soup = BeautifulSoup(html, "lxml")
         forecast = soup.findAll('table', attrs={'class': 'data'})
-        start_date = dateparser.parse(soup.find("h3").text.split(',')[0]).date()
+        start_date = self.month_normalizer(soup.find("h3").text.split(",")[0]).date()
         if len(forecast) < self.days:
             self.days = len(forecast)
         for day_time in range(self.days + 1):
@@ -61,7 +73,7 @@ class WeatherData(QRunnable):
             humidity = [x.string for x in day.findAll("tr", attrs={"class": "humidity"})[0].findAll("td")[1:]]
 
             for i in indexes:
-                print(f"{region} {day_date.day}")
+                # print(f"{region} {day_date.day}")
                 self.forecast.update({
                     day_date.strftime(f"%Y-%m-%d_{day_times[i]}"): {
                         int(f"{self.region_num}"): {
@@ -128,4 +140,3 @@ if __name__ == '__main__':
                      "https://primpogoda.ru/weather/vladivostok/vladivostok_ugolnaya/",
                      "5", "Vtoryak")
     wd.run()
-    print(1)
