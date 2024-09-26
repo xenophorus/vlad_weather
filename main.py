@@ -10,6 +10,14 @@ from WeatherData import WeatherData
 from DiskIO import DiskIO
 
 # nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 .\main.py
+'''
+TODO:
+- строка состояния
+- вывод сообщений в строке
+- сообщения об ошибках 
+- resize problem
+
+'''
 
 
 @dataclass
