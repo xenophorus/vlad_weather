@@ -14,9 +14,11 @@ class DiskIO:
                 lines = csv.DictReader(f)
                 return list(lines)
         except FileNotFoundError as fnf:
-            return ["Error", fnf.strerror]
-        except Exception as e:
-            return ["Error", f"{e.__class__}"]
+            raise FileNotFoundError
+            # return ["Error", fnf.strerror]
+        except Exception:
+            raise Exception
+            # return ["Error", f"{e.__class__}"]
 
     @staticmethod
     def delete_file(file_name, file_path):
