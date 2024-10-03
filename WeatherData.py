@@ -28,12 +28,37 @@ class WeatherData(QRunnable):
     def run(self):
         asyncio.run(self.get_weather_data())
 
+    async def get_weather_data(self):
+
+        html = await self.get_data(self.url + "/.week1")
+        self.get_info_nights(html, self.region_num, self.region)
+
+
     async def get_data(self, url):
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
         }
-        data = requests.get(url=url, headers=headers).text
-        return data
+        try:
+            data = requests.get(url=url, headers=headers)
+
+            # err = str(data.status_code)[0]
+
+            # if err == "4":
+            #     raise requests.exceptions.HTTPError(f"Ошибка {data.status_code}. Страница <{self.region}> не найдена! "
+            #                                         f"Неверный адрес или проблемы в файле данных.")
+            # if err == "5":
+            #     raise requests.exceptions.HTTPError(f"Ошибка {data.status_code}. "
+            #                                         f"Проблемы на стороне сервера, попробуйте позже.")
+            return data.text
+
+        except requests.HTTPError:
+            raise requests.exceptions.HTTPError
+        except requests.exceptions.RequestException:
+            raise requests.exceptions.RequestException
+        except ConnectionError:
+            raise ConnectionError
+        except Exception:
+            raise Exception
 
     def month_normalizer(self, dt: str) -> datetime:
         day_, m = dt.split(" ")
@@ -111,11 +136,6 @@ class WeatherData(QRunnable):
             if code in v:
                 return k
         return 2
-
-
-    async def get_weather_data(self):
-        html = await self.get_data(self.url + "/.week")
-        self.get_info_nights(html, self.region_num, self.region)
 
     def _get_season(self, month) -> int:
         if month < 3 or month == 12:

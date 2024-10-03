@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
-                               QPushButton, QLabel, QScrollArea, QComboBox, QProgressBar, QFrame, QLineEdit)
-from PySide6.QtCore import QSize, Qt, QRunnable, QThreadPool, Slot
+                               QPushButton, QLabel, QScrollArea, QComboBox, QProgressBar, QFrame, QStatusBar)
+from PySide6.QtCore import QSize, Qt, QThreadPool, Slot
+from PySide6.QtGui import QIcon, QPixmap, QAction
+
 from pathlib import Path
 from Settings import settings
 from WeatherData import WeatherData
@@ -18,7 +20,6 @@ TODO:
 - resize problem
 
 '''
-
 
 @dataclass
 class Sizes:
@@ -47,12 +48,18 @@ class Gui(QMainWindow):
         self.layout_center = QVBoxLayout()
         self.btn_load_data = QPushButton()
         self.btn_address = QPushButton()
+        self.setStatusBar(QStatusBar(self))
+        self.status_icon_label = QLabel()
+        self.status_label = QLabel()
         self.destination_dir = Path("/")
         self.tmp_dir = Path.cwd() / "tmp"
         self.tmp_dir.mkdir(parents=True, exist_ok=True)
         self.data = None
         self.triples = list()
         self.control_state = True
+        self.setWindowIcon(QIcon("icons/meteorology.ico"))
+        self.regions = dict()
+        self.set_status("smiley", "OK")
         self.setup_widgets()
         self.load_settings()
         self.list_files()
@@ -71,23 +78,28 @@ class Gui(QMainWindow):
 
     def forecast_thread(self):
         self.get_url_data()
-        # print(self.data[0])
-        self.switch_controls()
+        self.get_regions_forecast()
         self.hide_controls()
         self.clear_tmp_dir()
-        self.threadpool.start(self.get_forecast)
-        # self.get_forecast()
-        self.switch_controls()
+        self.threadpool.start(self.get_forecast_by_region)
 
     def progress_bar_increment(self):
         self.progress.setValue(self.progress.value() + 1)
 
     def get_url_data(self):
-        data = DiskIO.get_regions()
-        progress_max_value = len(data)
-        self.progress.setValue(0)
-        self.progress.setRange(0, progress_max_value)
-        self.data = data
+        try:
+            data = DiskIO.get_regions()
+            progress_max_value = len(data)
+            self.progress.setValue(0)
+            self.progress.setRange(0, progress_max_value)
+            self.data = data
+        except FileNotFoundError:
+            self.set_status("exclamation-red", "Файл с данными городов не найден!")
+            raise FileNotFoundError
+        except Exception as e:
+            self.set_status("exclamation-red", str(e.__context__))
+            raise Exception
+
 
     def switch_controls(self):
         self.control_state = not self.control_state
@@ -96,24 +108,46 @@ class Gui(QMainWindow):
         self.btn_address.setEnabled(self.control_state)
         self.btn_load_data.setEnabled(self.control_state)
 
+    def get_regions_forecast(self):
+        days = int(self.cmb_days.currentText())
+        for line in self.data:
+            self.regions[line.get("town")] = WeatherData(days, self.nights,
+                                                         line.get("url"), line.get("num"), line.get("town"))
+
+    def set_status(self, icon="information", text="OK"):
+        self.status_icon_label.setPixmap(QPixmap(f"./icons/{icon}.png"))
+        self.status_label.setText(text)
+
+
 
     @Slot()
-    def get_forecast(self):
+    def get_forecast_by_region(self):
+
+        switch_controls = QAction()
+        finished = QAction()
+        region_status = QAction()
+        switch_controls.triggered.connect(self.switch_controls)
+        finished.triggered.connect(self.list_files)
+
+        switch_controls.trigger()
 
         forecast = dict()
-        days = int(self.cmb_days.currentText())
+        for key, value in self.regions.items():
 
-        for line in self.data:
-            wd = WeatherData(days, self.nights, line.get("url"), line.get("num"), line.get("town"))
-            wd.run()
+            value.run()
 
-            for key, value in wd.forecast.items():
-                if forecast.get(key):
-                    forecast[key].update(wd.forecast[key])
+            for day, fcast in value.forecast.items():
+                if forecast.get(day):
+                    forecast[day].update(value.forecast[day])
                 else:
-                    forecast[key] = wd.forecast.get(key)
+                    forecast[day] = value.forecast.get(day)
 
-            self.progress_bar_increment()
+            progress_bar = QAction()
+            progress_bar.triggered.connect(self.progress_bar_increment)
+            progress_bar.trigger()
+            region_status.triggered.connect(lambda x: self.set_status("download", key))
+            region_status.trigger()
+
 
         for date_data in forecast.items():
             tomorrow = datetime.today().date() + timedelta(days=1)
@@ -121,7 +155,11 @@ class Gui(QMainWindow):
             if this_date >= tomorrow:
                 DiskIO.write_csv(date_data, str(self.tmp_dir))
 
-        self.list_files()
+        region_status.triggered.connect(lambda x: self.set_status("information", "Данные загружены"))
+        region_status.trigger()
+        finished.trigger()
+        switch_controls.trigger()
+
 
     def command(self):
         sender = self.sender()
@@ -166,10 +204,6 @@ class Gui(QMainWindow):
             button.setVisible(False)
             button.setText(f"Переместить")
             button.setEnabled(True)
-        #     button.setParent(None)
-        #     label.setParent(None)
-        #     layout.setParent(None)
-        # self.list_items()
 
     def list_files(self):
         files = list(self.tmp_dir.iterdir())
@@ -257,6 +291,8 @@ class Gui(QMainWindow):
         scroll_area = QScrollArea()
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         scroll_area.setWidgetResizable(True)
+        self.statusBar().addPermanentWidget(self.status_icon_label)
+        self.statusBar().addPermanentWidget(self.status_label, stretch=1)
 
         frame_center.setLayout(self.layout_center)
         self.layout_base.addWidget(frame_center)
