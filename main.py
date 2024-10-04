@@ -11,6 +11,8 @@ from Settings import settings
 from WeatherData import WeatherData
 from DiskIO import DiskIO
 
+from requests.exceptions import HTTPError
+
 # nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 .\main.py
 '''
 TODO:
@@ -81,7 +83,8 @@ class Gui(QMainWindow):
         self.get_regions_forecast()
         self.hide_controls()
         self.clear_tmp_dir()
-        self.threadpool.start(self.get_forecast_by_region)
+        self.get_forecast_by_region()
+        # self.threadpool.start(self.get_forecast_by_region)
 
     def progress_bar_increment(self):
         self.progress.setValue(self.progress.value() + 1)
@@ -126,6 +129,8 @@ class Gui(QMainWindow):
         switch_controls = QAction()
         finished = QAction()
         region_status = QAction()
+        error_action = QAction()
+
         switch_controls.triggered.connect(self.switch_controls)
         finished.triggered.connect(self.list_files)
 
@@ -134,7 +139,26 @@ class Gui(QMainWindow):
         forecast = dict()
         for key, value in self.regions.items():
 
-            value.run()
+            try:
+                value.run()
+            except ConnectionError:
+                error_action.triggered.connect(
+                    lambda x:
+                    self.set_status("exclamation-red", "Ошибка соединения"))
+                raise ConnectionError
+            except HTTPError as he:
+
+                error_action.triggered.connect(
+                    lambda x:
+                    self.set_status("exclamation-red", "Ошибка соединения"))
+                raise HTTPError
+            except IndexError:
+                raise IndexError
+            except TypeError:
+                raise TypeError
+            except Exception as e:
+                raise Exception
+
 
             for day, fcast in value.forecast.items():
                 if forecast.get(day):

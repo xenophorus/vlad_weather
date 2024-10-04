@@ -1,5 +1,3 @@
-from calendar import month
-
 from PySide6.QtCore import QRunnable, Slot
 
 import requests
@@ -10,7 +8,6 @@ import asyncio
 
 from bs4 import BeautifulSoup
 
-# https://www.pythonguis.com/tutorials/multithreading-pyside6-applications-qthreadpool/
 
 class WeatherData(QRunnable):
     locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
@@ -29,9 +26,14 @@ class WeatherData(QRunnable):
         asyncio.run(self.get_weather_data())
 
     async def get_weather_data(self):
-
         html = await self.get_data(self.url + "/.week1")
         self.get_info_nights(html, self.region_num, self.region)
+        # try:
+        #     self.get_info_nights(html, self.region_num, self.region)
+        # except IndexError:
+        #     raise IndexError
+        # except TypeError:
+        #     raise TypeError
 
 
     async def get_data(self, url):
@@ -42,7 +44,6 @@ class WeatherData(QRunnable):
             data = requests.get(url=url, headers=headers)
 
             # err = str(data.status_code)[0]
-
             # if err == "4":
             #     raise requests.exceptions.HTTPError(f"Ошибка {data.status_code}. Страница <{self.region}> не найдена! "
             #                                         f"Неверный адрес или проблемы в файле данных.")
@@ -52,7 +53,7 @@ class WeatherData(QRunnable):
             return data.text
 
         except requests.HTTPError:
-            raise requests.exceptions.HTTPError
+            raise requests.HTTPError
         except requests.exceptions.RequestException:
             raise requests.exceptions.RequestException
         except ConnectionError:
@@ -96,6 +97,8 @@ class WeatherData(QRunnable):
             pressure = [list(x.stripped_strings) for x in
                         day.findAll("tr", attrs={"class": "pressure"})[0].findAll("td")[1:]]
             humidity = [x.string for x in day.findAll("tr", attrs={"class": "humidity"})[0].findAll("td")[1:]]
+
+            # IndexError TypeError
 
             for i in indexes:
                 # print(f"{region} {day_date.day}")
