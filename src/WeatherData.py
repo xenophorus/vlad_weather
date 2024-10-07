@@ -12,13 +12,14 @@ from bs4 import BeautifulSoup
 class WeatherData(QRunnable):
     locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
 
-    def __init__(self, days: int, nights: bool, url: str, region_num: str, region: str):
+    def __init__(self, days: int, nights: bool, url: str, region_num: str, region: str, tomorrow: int):
         super().__init__()
         self.days = days
         self.nights = nights
         self.url = url
         self.region = region
         self.region_num = region_num
+        self.tomorrow = tomorrow
         self.forecast = dict()
 
     @Slot()
@@ -80,7 +81,7 @@ class WeatherData(QRunnable):
         start_date = self.month_normalizer(soup.find("h3").text.split(",")[0]).date()
         if len(forecast) < self.days:
             self.days = len(forecast)
-        for day_time in range(self.days + 1):
+        for day_time in range(self.days + self.tomorrow):
             day_date = start_date + timedelta(days=day_time)
             day = forecast[day_time]
             weather = [x.find("div").text for x in

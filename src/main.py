@@ -118,7 +118,7 @@ class Gui(QMainWindow):
                                                          line.get("url"), line.get("num"), line.get("town"))
 
     def set_status(self, icon="information", text="OK"):
-        self.status_icon_label.setPixmap(QPixmap(f"./icons/{icon}.png"))
+        self.status_icon_label.setPixmap(QPixmap(f"icons/{icon}.png"))
         self.status_label.setText(text)
 
 
@@ -338,7 +338,7 @@ class Gui(QMainWindow):
         dialog.setDirectoryUrl(str(self.destination_dir))
         selected_dir = dialog.getExistingDirectory()
 
-        if Path(selected_dir) != Path('.'):
+        if Path(selected_dir) != Path('..'):
             self.destination_dir = selected_dir
             self.lbl_address.setText(str(selected_dir))
             settings.set_target_folder(str(selected_dir))

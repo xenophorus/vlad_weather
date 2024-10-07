@@ -4,6 +4,7 @@ from pathlib import Path
 
 class Settings:
     def __init__(self):
+        self._tomorrow = 1
         self.urls_file = "input/towns.csv"
         self._target_folder: str = "~"
         self._days: int = 0
@@ -20,6 +21,7 @@ class Settings:
                 self._target_folder = str(Path.cwd())
                 self._days = 3
                 self._nights = True
+                self._tomorrow = 1
             if create:
                 self.write_settings()
 
@@ -33,13 +35,15 @@ class Settings:
             else:
                 self._days = _settings.get("days")
             self._nights = bool(_settings.get("nights"))
+            self._tomorrow = _settings.get("tomorrow")
 
     def write_settings(self) -> None:
         self.check_settings_file(bind=False, create=False)
         data = (f"urls_file: '{self.urls_file}'\n"
                 f"last_path: '{self._target_folder}'\n"
                 f"days: {self._days}\n"
-                f"nights: {bool(self._nights)}\n")
+                f"nights: {bool(self._nights)}\n"
+                f"tomorrow:{self._tomorrow}\n")
         with open(self.settings_file, "w", encoding="utf-8") as settings_file:
             settings_file.write(data)
 
@@ -60,6 +64,12 @@ class Settings:
 
     def set_nights(self, nights):
         self._nights = nights
+
+    def get_tomorrow(self):
+        return self._tomorrow
+
+    def set_tomorrow(self, tomorrow):
+        self._tomorrow = tomorrow
 
 
 settings = Settings()
