@@ -1,4 +1,5 @@
-from PySide6.QtCore import QRunnable, Slot
+from PySide6.QtCore import QRunnable, Slot, Signal
+from PySide6.QtGui import QAction
 
 import requests
 from datetime import timedelta, datetime
@@ -10,7 +11,10 @@ from bs4 import BeautifulSoup
 
 
 class WeatherData(QRunnable):
+
     locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
+
+    error_signal = Signal()
 
     def __init__(self, days: int, nights: bool, url: str, region_num: str, region: str, tomorrow: int):
         super().__init__()
@@ -27,7 +31,7 @@ class WeatherData(QRunnable):
         asyncio.run(self.get_weather_data())
 
     async def get_weather_data(self):
-        html = await self.get_data(self.url + "/.week1")
+        html = await self.get_data(self.url + "/.week")
         self.get_info_nights(html, self.region_num, self.region)
         # try:
         #     self.get_info_nights(html, self.region_num, self.region)
@@ -44,23 +48,10 @@ class WeatherData(QRunnable):
         try:
             data = requests.get(url=url, headers=headers)
 
-            # err = str(data.status_code)[0]
-            # if err == "4":
-            #     raise requests.exceptions.HTTPError(f"Ошибка {data.status_code}. Страница <{self.region}> не найдена! "
-            #                                         f"Неверный адрес или проблемы в файле данных.")
-            # if err == "5":
-            #     raise requests.exceptions.HTTPError(f"Ошибка {data.status_code}. "
-            #                                         f"Проблемы на стороне сервера, попробуйте позже.")
-            return data.text
+        except
+        data.raise_for_status()
+        return data.text
 
-        except requests.HTTPError:
-            raise requests.HTTPError
-        except requests.exceptions.RequestException:
-            raise requests.exceptions.RequestException
-        except ConnectionError:
-            raise ConnectionError
-        except Exception:
-            raise Exception
 
     def month_normalizer(self, dt: str) -> datetime:
         day_, m = dt.split(" ")
@@ -102,7 +93,6 @@ class WeatherData(QRunnable):
             # IndexError TypeError
 
             for i in indexes:
-                # print(f"{region} {day_date.day}")
                 self.forecast.update({
                     day_date.strftime(f"%Y-%m-%d_{day_times[i]}"): {
                         int(f"{self.region_num}"): {
@@ -113,7 +103,7 @@ class WeatherData(QRunnable):
                             "region_name": region,
                             "temp_real": f"{temperature[i]}C",
                             "temp_feel": f"{feeled_temperature[i]}C",
-                            "weather_num": self.weather_by_code(int(icons[i])),
+                            "weather_num": self._weather_by_code(int(icons[i])),
                             "weather_text": weather[i],
                             "humidity": humidity[i],
                             "wind_text": wind[i][0],
@@ -123,7 +113,7 @@ class WeatherData(QRunnable):
                     }
                 })
 
-    def weather_by_code(self, code: int) -> int:
+    def _weather_by_code(self, code: int) -> int:
         weather = {1: (1, 2), #ясно
                    3: (22, 19, 10), #облачно
                    4: (33, 23), #слабый дождь
@@ -161,6 +151,6 @@ class WeatherData(QRunnable):
 
 if __name__ == '__main__':
     wd = WeatherData(5, True,
-                     "https://primpogoda.ru/weather/vladivostok/vladivostok_ugolnaya/",
-                     "5", "Vtoryak")
+                     "https://primpogoda.ru/weather/vladivostok/vladivostok_ugolnaya",
+                     "5", "Vtoryak", 0)
     wd.run()

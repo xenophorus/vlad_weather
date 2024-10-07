@@ -13,14 +13,12 @@ from DiskIO import DiskIO
 
 from requests.exceptions import HTTPError
 
-# nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 .\main.py
+#nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 --windows-console-mode=disable .\main.py
 '''
 TODO:
-- строка состояния
 - вывод сообщений в строке
 - сообщения об ошибках 
-- resize problem
-
+https://stackoverflow.com/questions/72925772/how-to-connect-to-signal-from-one-class-to-a-slot-in-another
 '''
 
 @dataclass
@@ -61,7 +59,8 @@ class Gui(QMainWindow):
         self.control_state = True
         self.setWindowIcon(QIcon("icons/meteorology.ico"))
         self.regions = dict()
-        self.set_status("smiley", "OK")
+        self.set_status("information", "OK")
+        self.tomorrow = 1
         self.setup_widgets()
         self.load_settings()
         self.list_files()
@@ -70,6 +69,7 @@ class Gui(QMainWindow):
         settings.set_days(self.cmb_days.currentIndex())
         settings.set_nights(self.cmb_day_or_night.currentIndex())
         settings.set_target_folder(str(self.destination_dir))
+        settings.set_tomorrow(self.tomorrow)
         settings.write_settings()
 
     def load_settings(self):
@@ -115,7 +115,8 @@ class Gui(QMainWindow):
         days = int(self.cmb_days.currentText())
         for line in self.data:
             self.regions[line.get("town")] = WeatherData(days, self.nights,
-                                                         line.get("url"), line.get("num"), line.get("town"))
+                                                         line.get("url"), line.get("num"),
+                                                         line.get("town"), line.get("tomorrow"))
 
     def set_status(self, icon="information", text="OK"):
         self.status_icon_label.setPixmap(QPixmap(f"icons/{icon}.png"))
@@ -147,7 +148,6 @@ class Gui(QMainWindow):
                     self.set_status("exclamation-red", "Ошибка соединения"))
                 raise ConnectionError
             except HTTPError as he:
-
                 error_action.triggered.connect(
                     lambda x:
                     self.set_status("exclamation-red", "Ошибка соединения"))
