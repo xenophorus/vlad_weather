@@ -13,12 +13,6 @@ from WeatherData import WeatherData
 from DiskIO import DiskIO
 
 # nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 --windows-console-mode=disable .\main.py
-'''
-TODO:
-- вывод сообщений в строке
-- сообщения об ошибках 
-https://stackoverflow.com/questions/72925772/how-to-connect-to-signal-from-one-class-to-a-slot-in-another
-'''
 
 @dataclass
 class Sizes:
