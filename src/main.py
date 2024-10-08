@@ -110,6 +110,7 @@ class Gui(QMainWindow):
         self.cmb_days.setEnabled(self.control_state)
         self.btn_address.setEnabled(self.control_state)
         self.btn_load_data.setEnabled(self.control_state)
+        self.check_today.setEnabled(self.control_state)
 
     def get_regions_forecast(self):
         days = int(self.cmb_days.currentText())
