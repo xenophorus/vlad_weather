@@ -1,29 +1,22 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QCheckBox,
                                QPushButton, QLabel, QScrollArea, QComboBox, QProgressBar, QFrame, QStatusBar)
 from PySide6.QtCore import QSize, Qt, QThreadPool, Slot
 from PySide6.QtGui import QIcon, QPixmap, QAction
 
 from pathlib import Path
+
 from Settings import settings
 from WeatherData import WeatherData
 from DiskIO import DiskIO
 
-# nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 .\main.py
-'''
-TODO:
-- строка состояния
-- вывод сообщений в строке
-- сообщения об ошибках 
-- resize problem
-
-'''
+# nuitka --follow-imports --onefile --windows-icon-from-ico=meteorology.ico --plugin-enable=pyside6 --windows-console-mode=disable .\main.py
 
 @dataclass
 class Sizes:
-    win_x: int = 650
+    win_x: int = 700
     win_y: int = 500
     contents_margins: tuple[int] = (10, 10, 10, 10)
     spacing: int = 5
@@ -54,12 +47,14 @@ class Gui(QMainWindow):
         self.destination_dir = Path("/")
         self.tmp_dir = Path.cwd() / "tmp"
         self.tmp_dir.mkdir(parents=True, exist_ok=True)
+        self.check_today = QCheckBox()
         self.data = None
         self.triples = list()
         self.control_state = True
         self.setWindowIcon(QIcon("icons/meteorology.ico"))
         self.regions = dict()
-        self.set_status("smiley", "OK")
+        self.set_status("information", "OK")
+        self.from_today = True
         self.setup_widgets()
         self.load_settings()
         self.list_files()
@@ -68,6 +63,7 @@ class Gui(QMainWindow):
         settings.set_days(self.cmb_days.currentIndex())
         settings.set_nights(self.cmb_day_or_night.currentIndex())
         settings.set_target_folder(str(self.destination_dir))
+        settings.set_from_today(self.from_today)
         settings.write_settings()
 
     def load_settings(self):
@@ -75,12 +71,19 @@ class Gui(QMainWindow):
         self.cmb_day_or_night.setCurrentIndex(settings.get_nights())
         self.destination_dir = Path(settings.get_target_folder())
         self.lbl_address.setText(str(self.destination_dir))
+        self.from_today = bool(settings.get_from_today())
+        self.check_today.setChecked(self.from_today)
+
+    def checkbox_status(self):
+        self.from_today = self.check_today.isChecked()
+        print(self.from_today)
 
     def forecast_thread(self):
         self.get_url_data()
         self.get_regions_forecast()
         self.hide_controls()
         self.clear_tmp_dir()
+        # self.get_forecast_by_region()
         self.threadpool.start(self.get_forecast_by_region)
 
     def progress_bar_increment(self):
@@ -95,10 +98,10 @@ class Gui(QMainWindow):
             self.data = data
         except FileNotFoundError:
             self.set_status("exclamation-red", "Файл с данными городов не найден!")
-            raise FileNotFoundError
+            # raise FileNotFoundError
         except Exception as e:
             self.set_status("exclamation-red", str(e.__context__))
-            raise Exception
+            # raise Exception
 
 
     def switch_controls(self):
@@ -107,18 +110,18 @@ class Gui(QMainWindow):
         self.cmb_days.setEnabled(self.control_state)
         self.btn_address.setEnabled(self.control_state)
         self.btn_load_data.setEnabled(self.control_state)
+        self.check_today.setEnabled(self.control_state)
 
     def get_regions_forecast(self):
         days = int(self.cmb_days.currentText())
         for line in self.data:
             self.regions[line.get("town")] = WeatherData(days, self.nights,
-                                                         line.get("url"), line.get("num"), line.get("town"))
+                                                         line.get("url"), line.get("num"),
+                                                         line.get("town"))
 
     def set_status(self, icon="information", text="OK"):
-        self.status_icon_label.setPixmap(QPixmap(f"./icons/{icon}.png"))
+        self.status_icon_label.setPixmap(QPixmap(f"icons/{icon}.png"))
         self.status_label.setText(text)
-
-
 
     @Slot()
     def get_forecast_by_region(self):
@@ -126,6 +129,8 @@ class Gui(QMainWindow):
         switch_controls = QAction()
         finished = QAction()
         region_status = QAction()
+        error_action = QAction()
+
         switch_controls.triggered.connect(self.switch_controls)
         finished.triggered.connect(self.list_files)
 
@@ -136,11 +141,16 @@ class Gui(QMainWindow):
 
             value.run()
 
-            for day, fcast in value.forecast.items():
-                if forecast.get(day):
-                    forecast[day].update(value.forecast[day])
-                else:
-                    forecast[day] = value.forecast.get(day)
+            if value.forecast.get("error"):
+                error_action.triggered.connect(self.set_status("exclamation-red",
+                                                               f"{key} {value.forecast.get('string')}"))
+                error_action.trigger()
+            else:
+                for day, fcast in value.forecast.items():
+                    if forecast.get(day):
+                        forecast[day].update(value.forecast[day])
+                    else:
+                        forecast[day] = value.forecast.get(day)
 
             progress_bar = QAction()
             progress_bar.triggered.connect(self.progress_bar_increment)
@@ -148,14 +158,19 @@ class Gui(QMainWindow):
             region_status.triggered.connect(lambda x: self.set_status("download", key))
             region_status.trigger()
 
-
         for date_data in forecast.items():
-            tomorrow = datetime.today().date() + timedelta(days=1)
+            d = int(not self.check_today.isChecked())
+            tomorrow = datetime.today().date() + timedelta(days=d)
             this_date = datetime.strptime(date_data[0].split("_")[0], "%Y-%m-%d").date()
             if this_date >= tomorrow:
                 DiskIO.write_csv(date_data, str(self.tmp_dir))
 
-        region_status.triggered.connect(lambda x: self.set_status("information", "Данные загружены"))
+        if forecast.items():
+            region_status.triggered.connect(
+                lambda x: self.set_status("information", "Данные загружены"))
+        else:
+            region_status.triggered.connect(
+                lambda x: self.set_status("exclamation-red", "Данные не загружены"))
         region_status.trigger()
         finished.trigger()
         switch_controls.trigger()
@@ -240,23 +255,37 @@ class Gui(QMainWindow):
         self.cmb_days.addItems(list(map(lambda x: str(x), range(1, 5))))
         layout_days.addWidget(lbl_combo)
         layout_days.addWidget(self.cmb_days)
+        layout_days.addSpacing(15)
+
+        layout_today = QHBoxLayout()
+        layout_days.setAlignment(Qt.AlignLeft)
+        lbl_today = QLabel()
+        lbl_today.setText("Сегодня")
+        self.check_today.checkStateChanged.connect(self.checkbox_status)
+        # layout_today.addSpacing(15)
+
+        layout_today.addWidget(lbl_today)
+        layout_today.addWidget(self.check_today)
 
         layout_dn = QHBoxLayout()
-        layout_dn.setAlignment(Qt.AlignCenter)
+        layout_dn.setAlignment(Qt.AlignLeft)
 
         self.cmb_day_or_night.setMinimumWidth(Sizes.widget_min_width)
         self.cmb_day_or_night.addItems(["Только день", "День и ночь"])
         self.cmb_day_or_night.setMinimumHeight(Sizes.widget_min_height)
         self.cmb_day_or_night.currentIndexChanged.connect(self.set_day_or_night)
         layout_dn.addWidget(self.cmb_day_or_night)
+        layout_dn.addSpacing(15)
 
         layout_load = QHBoxLayout()
         layout_load.setAlignment(Qt.AlignRight)
+        layout_load.addStretch()
         self.btn_load_data.setMinimumWidth(Sizes.widget_min_width)
         self.btn_load_data.setMinimumHeight(Sizes.widget_min_height)
         self.btn_load_data.setText("Загрузить данные")
         self.btn_load_data.clicked.connect(self.forecast_thread)
         layout_load.addWidget(self.btn_load_data)
+        layout_load.insertSpacing(0, 30)
 
         layout_address = QHBoxLayout()
         layout_address.setContentsMargins(0, 0, 0, 5)
@@ -273,6 +302,7 @@ class Gui(QMainWindow):
         layout_address.addWidget(self.btn_address)
         layout_top_up.addLayout(layout_days)
         layout_top_up.addLayout(layout_dn)
+        layout_top_up.addLayout(layout_today)
         layout_top_up.addLayout(layout_load)
         layout_top.addLayout(layout_top_up)
         layout_top.addLayout(layout_address)
@@ -314,7 +344,7 @@ class Gui(QMainWindow):
         dialog.setDirectoryUrl(str(self.destination_dir))
         selected_dir = dialog.getExistingDirectory()
 
-        if Path(selected_dir) != Path('.'):
+        if Path(selected_dir) != Path('..'):
             self.destination_dir = selected_dir
             self.lbl_address.setText(str(selected_dir))
             settings.set_target_folder(str(selected_dir))
