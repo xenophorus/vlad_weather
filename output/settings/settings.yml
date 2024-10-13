@@ -1,4 +1,0 @@
-urls_file: 'input/towns.csv'
-last_path: 'D:\Doxx\dev\vlad_weather\output'
-days: 3
-nights: True
