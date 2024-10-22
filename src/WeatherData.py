@@ -1,3 +1,5 @@
+from operator import index
+
 from PySide6.QtCore import QRunnable, Slot, Signal
 
 import requests
@@ -102,7 +104,7 @@ class WeatherData(QRunnable):
                                 "weather_num": self._weather_by_code(int(icons[i])),
                                 "weather_text": weather[i],
                                 "humidity": humidity[i],
-                                "wind_text": wind[i][0],
+                                "wind_int": self.wind_direction_to_num(wind[i][0]),
                                 "wind_speed": wind[i][1],
                                 "pressure": f"{pressure[i][0]}мм.рт.ст."
                             }
@@ -113,6 +115,12 @@ class WeatherData(QRunnable):
 
         except Exception as e:
             self.make_error_dict("Page parsing error", str(e))
+
+    def wind_direction_to_num(self, wind: str) -> int:
+        wind_str = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
+        if len(wind) > 2:
+            return self.wind_direction_to_num(wind[0])
+        return wind_str.index(wind.upper()) + 1
 
     def make_error_dict(self, type_, string_):
         err_dict = {
@@ -163,3 +171,4 @@ if __name__ == '__main__':
                      "https://primpogoda.ru/weather/vladivostok/vladivostok_ugolnaya",
                      "5", "Vtoryak")
     wd.run()
+    print(1)
