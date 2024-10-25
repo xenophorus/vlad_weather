@@ -1,5 +1,5 @@
 urls_file: 'input/towns.csv'
-last_path: 'D:/'
+last_path: 'D:\'
 days: 3
 nights: True
 from_today: True

@@ -96,17 +96,17 @@ class WeatherData(QRunnable):
                             int(f"{self.region_num}"): {
                                 "season": self._get_season(day_date.month),
                                 "date": f"{day_date.day} {self._get_month(day_date.month)}",
-                                "weekday": calendar.day_name[day_date.weekday()],
-                                "region_num": region_num,
+                                "weekday": calendar.day_name[day_date.weekday()].capitalize(),
                                 "region_name": region,
-                                "temp_real": f"{temperature[i]}C",
-                                "temp_feel": f"{felt_temperature[i]}C",
+                                "region_num": region_num,
+                                "temp_real": f"{self.temp_add_sigh(temperature[i])}C",
+                                "temp_feel": f"{self.temp_add_sigh(felt_temperature[i])}C",
                                 "weather_num": self._weather_by_code(int(icons[i])),
                                 "weather_text": weather[i],
                                 "humidity": humidity[i],
                                 "wind_int": self.wind_direction_to_num(wind[i][0]),
                                 "wind_speed": wind[i][1],
-                                "pressure": f"{pressure[i][0]}мм.рт.ст."
+                                "pressure": f"{pressure[i][0]} мм.рт.ст."
                             }
                         }
                     })
@@ -116,10 +116,18 @@ class WeatherData(QRunnable):
         except Exception as e:
             self.make_error_dict("Page parsing error", str(e))
 
+    def temp_add_sigh(self, temperature: str) -> str:
+        if temperature[0] not in ['0', '-']:
+            return f"+{temperature}"
+        else:
+            return temperature
+
     def wind_direction_to_num(self, wind: str) -> int:
         wind_str = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
-        if len(wind) > 2:
+        if len(wind) == 3:
             return self.wind_direction_to_num(wind[0])
+        if len(wind) > 3:
+            return 0
         return wind_str.index(wind.upper()) + 1
 
     def make_error_dict(self, type_, string_):

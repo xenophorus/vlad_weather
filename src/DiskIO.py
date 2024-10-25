@@ -40,7 +40,7 @@ class DiskIO:
         with file.open("w", encoding="utf-8") as csv_file:
             regions = list(data_dict.values())
             field_names = list(regions[0].keys())
-            csv_writer = csv.DictWriter(csv_file, fieldnames=field_names, dialect='unix')
+            csv_writer = csv.DictWriter(csv_file, fieldnames=field_names) # , dialect='unix'
             csv_writer.writeheader()
             for region in regions:
                 csv_writer.writerow(region)
